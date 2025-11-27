@@ -26,10 +26,10 @@ app.use(session({
 
 // CHANGE 2: Use Environment Variables for Database
 const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'uts123',
-    database: process.env.DB_NAME || 'cents_in_seconds_db',
+    host: process.env.DB_HOST || 'bmtuwf8ydirjgxews10z-mysql.services.clever-cloud.com',
+    user: process.env.DB_USER || 'uv7ujvbeujoxysyh',
+    password: process.env.DB_PASSWORD || 'GaIghpizmUCIZ6BIv3bk',
+    database: process.env.DB_NAME || 'bmtuwf8ydirjgxews10z',
     port: 3306 // Standard MySQL port
 });
 
@@ -132,4 +132,5 @@ app.delete('/api/expenses/:id', isAuthenticated, (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+
 });
