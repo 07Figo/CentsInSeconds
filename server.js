@@ -7,7 +7,6 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 
 const app = express();
-// CHANGE 1: Let Render decide the port, or fallback to 3000 for local testing
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -18,13 +17,13 @@ app.use(express.static(path.join(__dirname)));
 
 // Session Setup
 app.use(session({
-    secret: 'secret_key_cents_seconds', // In a real real app, use process.env.SESSION_SECRET
+    secret: 'secret_key_cents_seconds', 
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 3600000 }
 }));
 
-// CHANGE 2: Use Environment Variables for Database
+// Database Connection
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'bmtuwf8ydirjgxews10z-mysql.services.clever-cloud.com',
     user: process.env.DB_USER || 'uv7ujvbeujoxysyh',
@@ -38,12 +37,12 @@ db.connect((err) => {
     else console.log('Connected to MySQL database.');
 });
 
-// CHANGE 3: Keep-Alive Script (Prevents "Protocol Enqueue After Fatal Error")
+// Keep-Alive Script
 setInterval(() => {
     db.query('SELECT 1', (err) => {
         if (err) console.error('Keep-alive query failed', err);
     });
-}, 5000); // Ping database every 5 seconds
+}, 5000); 
 
 // --- AUTHENTICATION ---
 app.post('/api/register', (req, res) => {
@@ -78,15 +77,13 @@ app.get('/api/user', (req, res) => {
     res.json({ loggedIn: !!req.session.userId });
 });
 
-// --- MIDDLEWARE TO PROTECT ROUTES ---
+// --- MIDDLEWARE ---
 const isAuthenticated = (req, res, next) => {
     if (req.session.userId) next();
     else res.status(401).json({ error: "Unauthorized" });
 };
 
 // --- EXPENSE ROUTES ---
-
-// 1. GET
 app.get('/api/expenses', isAuthenticated, (req, res) => {
     db.query("SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC, id DESC", [req.session.userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -94,7 +91,6 @@ app.get('/api/expenses', isAuthenticated, (req, res) => {
     });
 });
 
-// 2. POST (Add)
 app.post('/api/expenses', isAuthenticated, (req, res) => {
     const { description, amount, category } = req.body;
     const date = new Date().toISOString().split('T')[0];
@@ -107,7 +103,6 @@ app.post('/api/expenses', isAuthenticated, (req, res) => {
     });
 });
 
-// 3. PUT (Update)
 app.put('/api/expenses/:id', isAuthenticated, (req, res) => {
     const { id } = req.params;
     const { description, amount, category } = req.body;
@@ -120,7 +115,6 @@ app.put('/api/expenses/:id', isAuthenticated, (req, res) => {
     });
 });
 
-// 4. DELETE
 app.delete('/api/expenses/:id', isAuthenticated, (req, res) => {
     const { id } = req.params;
     const userId = req.session.userId;
@@ -130,7 +124,46 @@ app.delete('/api/expenses/:id', isAuthenticated, (req, res) => {
     });
 });
 
+// --- SAVINGS ROUTES (NEW) ---
+app.get('/api/savings', isAuthenticated, (req, res) => {
+    db.query("SELECT * FROM savings WHERE user_id = ?", [req.session.userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+app.post('/api/savings', isAuthenticated, (req, res) => {
+    const { title, target_amount, current_amount } = req.body;
+    const userId = req.session.userId;
+    db.query("INSERT INTO savings (title, target_amount, current_amount, user_id) VALUES (?, ?, ?, ?)", 
+        [title, target_amount, current_amount || 0, userId], 
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "success" });
+    });
+});
+
+app.put('/api/savings/:id', isAuthenticated, (req, res) => {
+    const { title, target_amount, current_amount } = req.body;
+    const { id } = req.params;
+    const userId = req.session.userId;
+    db.query("UPDATE savings SET title = ?, target_amount = ?, current_amount = ? WHERE id = ? AND user_id = ?", 
+        [title, target_amount, current_amount, id, userId], 
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "updated" });
+    });
+});
+
+app.delete('/api/savings/:id', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+    const userId = req.session.userId;
+    db.query("DELETE FROM savings WHERE id = ? AND user_id = ?", [id, userId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "deleted" });
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-
 });
