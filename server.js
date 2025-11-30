@@ -64,7 +64,13 @@ app.post('/api/login', (req, res) => {
 
         req.session.userId = user.id;
         req.session.username = user.username;
-        res.json({ message: "Login successful", username: user.username });
+        
+        // RETURN PRO STATUS
+        res.json({ 
+            message: "Login successful", 
+            username: user.username,
+            isPro: !!user.is_pro 
+        });
     });
 });
 
@@ -82,6 +88,15 @@ const isAuthenticated = (req, res, next) => {
     if (req.session.userId) next();
     else res.status(401).json({ error: "Unauthorized" });
 };
+
+// --- PRO UPGRADE (SIMULATION) ---
+app.post('/api/upgrade', isAuthenticated, (req, res) => {
+    const userId = req.session.userId;
+    db.query("UPDATE users SET is_pro = 1 WHERE id = ?", [userId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Upgraded to Pro!" });
+    });
+});
 
 // --- EXPENSE ROUTES ---
 app.get('/api/expenses', isAuthenticated, (req, res) => {
@@ -124,7 +139,7 @@ app.delete('/api/expenses/:id', isAuthenticated, (req, res) => {
     });
 });
 
-// --- SAVINGS ROUTES (NEW) ---
+// --- SAVINGS ROUTES ---
 app.get('/api/savings', isAuthenticated, (req, res) => {
     db.query("SELECT * FROM savings WHERE user_id = ?", [req.session.userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
