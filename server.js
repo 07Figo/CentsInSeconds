@@ -90,7 +90,7 @@ const isAuthenticated = (req, res, next) => {
 };
 
 // --- PRO UPGRADE (SIMULATION) ---
-app.post('/api/upgrade', isAuthenticated, (req, res) => {
+app.post('/api/upgrade', (req, res) => {
     const userId = req.session.userId;
     db.query("UPDATE users SET is_pro = 1 WHERE id = ?", [userId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -182,3 +182,4 @@ app.delete('/api/savings/:id', isAuthenticated, (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
