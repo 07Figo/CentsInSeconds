@@ -62,12 +62,12 @@ app.post('/api/login', (req, res) => {
         const user = results[0];
         if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: "Invalid password" });
 
-        req.session.userId = user.id;
-        req.session.username = user.username;
+        req.session.userId = user.id; // Keep this for web
         
-        // RETURN PRO STATUS
+        // SEND USER ID TO PHONE
         res.json({ 
             message: "Login successful", 
+            userId: user.id, // <--- NEW!
             username: user.username,
             isPro: !!user.is_pro 
         });
@@ -185,5 +185,6 @@ app.delete('/api/savings/:id', isAuthenticated, (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
 
 
