@@ -62,12 +62,13 @@ app.post('/api/login', (req, res) => {
         const user = results[0];
         if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: "Invalid password" });
 
-        req.session.userId = user.id; // Keep this for web
+        req.session.userId = user.id;
+        req.session.username = user.username;
         
         // SEND USER ID TO PHONE
         res.json({ 
             message: "Login successful", 
-            userId: user.id, // <--- NEW!
+            userId: user.id, // <--- IMPORTANT: Sends ID to phone
             username: user.username,
             isPro: !!user.is_pro 
         });
@@ -89,16 +90,23 @@ const isAuthenticated = (req, res, next) => {
     else res.status(401).json({ error: "Unauthorized" });
 };
 
-// --- PRO UPGRADE (SIMULATION) ---
+// --- PRO UPGRADE (FIXED) ---
 app.post('/api/upgrade', (req, res) => {
-    // 1. Try to update the database (Best effort)
-    if (req.session && req.session.userId) {
-        db.query("UPDATE users SET is_pro = 1 WHERE id = ?", [req.session.userId]);
-    }
+    // 1. Get ID from the phone's message
+    const { userId } = req.body;
 
-    // 2. ALWAYS send success back to the phone
-    // This ensures your app will unlock the Pro features no matter what
-    res.json({ message: "Upgraded to Pro (Test Mode)" });
+    if (userId) {
+        db.query("UPDATE users SET is_pro = 1 WHERE id = ?", [userId], (err) => {
+            if (err) {
+                console.error("Database update failed:", err);
+                return res.status(500).json({ error: "Database error" });
+            }
+            res.json({ message: "Upgraded successfully!" });
+        });
+    } else {
+        // Fallback if no ID sent
+        res.status(400).json({ error: "No User ID provided" });
+    }
 });
 
 // --- EXPENSE ROUTES ---
@@ -185,6 +193,5 @@ app.delete('/api/savings/:id', isAuthenticated, (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
 
 
